@@ -7,17 +7,24 @@ use Illuminate\Http\Request;
 use App\Http\Requests;
 
 use App\Task;    // 追加
+use App\User;
 
 class TasksController extends Controller
 {
     // getでmessages/にアクセスされた場合の「一覧表示処理」
     public function index()
     {
-        $tasks = Task::all();
         
-        return view('tasks.index', [
-            'tasks' => $tasks,
-            ]);
+        if (\Auth::check()) {
+            $user = \Auth::user();
+            $tasks = $user->tasklists()->get();
+            
+            return view('tasks.index', [
+                'tasks' => $tasks,
+                ]);
+        }else{
+            return view('welcome');
+        }
     }
 
     // getでmessages/createにアクセスされた場合の「新規登録画面表示処理」
@@ -36,10 +43,12 @@ class TasksController extends Controller
         $this->validate($request, [
             'status' => 'required|max:10',
             ]);
-        $task = new Task;
-        $task->content = $request->content;
-        $task->status = $request->status;
-        $task->save();
+            
+        $request->user()->tasklists()->create([
+            'content' => $request->content,
+            'status' => $request->status,
+            'user_id' => $request->user()->id,
+            ]);
         
         return redirect('/');
     }
@@ -57,11 +66,15 @@ class TasksController extends Controller
     // getでmessages/id/editにアクセスされた場合の「更新画面表示処理」
     public function edit($id)
     {
+        $user = \Auth::user();
         $task = Task::find($id);
-        
-        return view('tasks.edit', [
-            'task' => $task,
-            ]);
+        if ($user->id === $task->user_id) {
+            return view('tasks.edit', [
+                'task' => $task,
+                ]);
+        }else{
+            return redirect('/');
+        }
     }
 
     // putまたはpatchでmessages/idにアクセスされた場合の「更新処理」
@@ -72,9 +85,12 @@ class TasksController extends Controller
             ]);
             
         $task = Task::find($id);
-        $task->status = $request->status;
-        $task->content = $request->content;
-        $task->save();
+        $user = \Auth::user();
+        if ($user->id === $task->user_id) {
+            $task->status = $request->status;
+            $task->content = $request->content;
+            $task->save();
+        }
         
         return redirect('/');
     }
@@ -83,7 +99,10 @@ class TasksController extends Controller
     public function destroy($id)
     {
         $task = Task::find($id);
-        $task->delete();
+        $user = \Auth::user();
+        if ($user->id === $task->user_id) {
+            $task->delete();
+        }
         
         return redirect('/');
     }
