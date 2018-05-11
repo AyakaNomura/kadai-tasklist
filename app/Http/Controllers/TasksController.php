@@ -31,10 +31,13 @@ class TasksController extends Controller
     public function create()
     {
         $task = new Task;
-        
+        if (\Auth::check()) {
         return view('tasks.create', [
             'task' => $task,
             ]);
+        }else{
+            return view('welcome');
+        }
     }
 
     // postでmessages/にアクセスされた場合の「新規登録処理」
@@ -56,11 +59,15 @@ class TasksController extends Controller
     // getでmessages/idにアクセスされた場合の「取得表示処理」
     public function show($id)
     {
+        $user = \Auth::user();
         $task = Task::find($id);
-        
+        if ($user->id === $task->user_id) {
         return view('tasks.show', [
             'task' => $task,
             ]);
+        }else{
+            return redirect('/');
+        }
     }
 
     // getでmessages/id/editにアクセスされた場合の「更新画面表示処理」
@@ -68,7 +75,7 @@ class TasksController extends Controller
     {
         $user = \Auth::user();
         $task = Task::find($id);
-        if ($user->id === $task->user_id) {
+        if (\Auth::check() && $user->id === $task->user_id) {
             return view('tasks.edit', [
                 'task' => $task,
                 ]);
@@ -100,7 +107,7 @@ class TasksController extends Controller
     {
         $task = Task::find($id);
         $user = \Auth::user();
-        if ($user->id === $task->user_id) {
+        if (\Auth::check() && $user->id === $task->user_id) {
             $task->delete();
         }
         
